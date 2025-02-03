@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using UserDB_API_NET.Models;
 
@@ -9,11 +10,22 @@ namespace UserDB_API_NET
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            //builder.Services.AddDbContext<TestUserDataContext>(options =>
+            //    options.UseSqlite("Data Source=D:\\Coding Projects\\_Python\\DataToCSVFile\\TestUserData.db"));
+
+
+            //Used that construction to have possibility to redefine the timeout
             builder.Services.AddDbContext<TestUserDataContext>(options =>
-                options.UseSqlite("Data Source=D:\\Coding Projects\\_Python\\DataToCSVFile\\TestUserData.db"));
+            {
+                var connection = new SqliteConnection("Data Source=D:\\Coding Projects\\_Python\\DataToCSVFile\\TestUserData.db")
+                {
+                    DefaultTimeout = 60
+                };
+
+                options.UseSqlite(connection);
+            });
 
             // Add services to the container.
-
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();

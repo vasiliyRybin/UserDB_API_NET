@@ -18,6 +18,17 @@ namespace UserDB_API_NET.Controllers
             return await _context.Users.Take(1000).ToListAsync();
         }
 
+        /// <summary>
+        /// Get user by his TaxId
+        /// </summary>
+        /// <param name="Amount"></param>
+        /// <returns></returns>
+        [HttpGet("Amount/{Amount}")]
+        public async Task<ActionResult<IEnumerable<User>>> GetUser(int Amount)
+        {
+            return await _context.Users.Take(Amount).ToListAsync();
+        }
+
         [HttpGet("{TaxId}")]
         public async Task<ActionResult<User>> GetUser(long? TaxId)
         {
@@ -72,16 +83,16 @@ namespace UserDB_API_NET.Controllers
         [HttpDelete("{TaxId}")]
         public async Task<IActionResult> DeleteUser(long? TaxId)
         {
-            var user = await _context.Users.FindAsync(TaxId);
+            var user = await _context.Users.FirstOrDefaultAsync(x => x.TaxId == TaxId);
             if (user == null)
             {
-                return NotFound();
+                return NotFound("No user with such TaxID");
             }
 
-            _context.Users.Remove(user);
+            _context.Entry(user).State = EntityState.Deleted;
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return Ok($"User with TaxId {TaxId} was successfully removed");
         }
     }
 }

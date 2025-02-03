@@ -22,7 +22,7 @@ public partial class TestUserDataContext : DbContext
     {
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasNoKey();
+            entity.HasKey(e => e.TaxId);
 
             entity.HasIndex(e => e.Email, "IX_Email");
 
