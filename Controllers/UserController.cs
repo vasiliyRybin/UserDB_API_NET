@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using UserDB_API_NET.Models;
+using UserDB_API_NET.Validation;
 
 
 namespace UserDB_API_NET.Controllers
@@ -34,10 +35,7 @@ namespace UserDB_API_NET.Controllers
         {
             var user = await _context.Users.FirstOrDefaultAsync(x => x.TaxId == TaxId);
 
-            if (user == null)
-            {
-                return NotFound("No user with such TaxID");
-            }
+            if (user == null) return NotFound("No user with such TaxID"); 
 
             return user;
         }
@@ -45,7 +43,13 @@ namespace UserDB_API_NET.Controllers
         [HttpPost]
         public async Task<ActionResult<User>> PostUser(User user)
         {
-            _context.Users.Add(user);
+            var isValid = UserValidation.CheckUserInput(user);
+            if (!isValid.Key) return BadRequest(isValid.Value);
+
+            var userRecord = await _context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.TaxId == user.TaxId);
+            if (userRecord != null) return Conflict($"User with TaxID {user.TaxId} already exists");
+
+            await _context.Users.AddAsync(user);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetUser), new { user.TaxId }, user);
@@ -54,40 +58,33 @@ namespace UserDB_API_NET.Controllers
         [HttpPut("{TaxId}")]
         public async Task<IActionResult> PutUser(long? TaxId, User user)
         {
-            if (TaxId != user.TaxId)
-            {
-                return BadRequest();
-            }
+            var isValid = UserValidation.CheckUserInput(user);
+            if (!isValid.Key) return BadRequest(isValid.Value);
 
-            _context.Entry(user).State = EntityState.Modified;
+            var userRecord = await _context.Users.FirstOrDefaultAsync(x => x.TaxId == TaxId);
+            if (userRecord == null) return NotFound($"User with TaxID {TaxId} not found");
 
             try
             {
+                _context.Users.Remove(userRecord);
+                await _context.SaveChangesAsync();
+
+                await _context.Users.AddAsync(user);
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (Exception ex)
             {
-                if (!_context.Users.Any(e => e.TaxId == TaxId))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return BadRequest(ex.Message);
             }
 
-            return NoContent();
+            return Ok("User info updated.");
         }
 
         [HttpDelete("{TaxId}")]
         public async Task<IActionResult> DeleteUser(long? TaxId)
         {
             var user = await _context.Users.FirstOrDefaultAsync(x => x.TaxId == TaxId);
-            if (user == null)
-            {
-                return NotFound("No user with such TaxID");
-            }
+            if (user == null) return NotFound("No user with such TaxID"); 
 
             _context.Entry(user).State = EntityState.Deleted;
             await _context.SaveChangesAsync();
